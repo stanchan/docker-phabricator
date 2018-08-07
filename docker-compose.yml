@@ -1,0 +1,56 @@
+version: "3"
+services:
+  caddy:
+    container_name: phab-caddy
+    image: stanchan/caddy:0.11.0
+    environment:
+      CADDY_TLS_MODE: caddy_tls_selfsigned
+    volumes:
+      - ./conf/caddy/Caddyfile:/etc/Caddyfile
+      - ./conf/caddy/config:/etc/caddy
+      - ./conf/caddy/.caddy:/root/.caddy
+    ports:
+      - "80:80"
+      - "443:443"
+      - "2015:2105"
+      - "8848:8848"
+    networks:
+      phabricator:
+        aliases:
+          - caddy
+  phabricator:
+    image: redpointgames/phabricator
+    restart: always
+    environment:
+     - MYSQL_HOST=mysql
+     - MYSQL_USER=root
+     - MYSQL_PASS=phabricator
+     - PHABRICATOR_REPOSITORY_PATH=/repos
+     - PHABRICATOR_HOST=phab.shift-labs.com
+    ports:
+      - "8443:443"
+      - "8080:80"
+    volumes:
+      - ./data/phabricator/repos:/repos
+      - ./data/phabricator/extensions:/srv/phabricator/phabricator/src/extensions
+    depends_on:
+      - mysql
+    networks:
+      phabricator:
+        aliases:
+          - phabricator
+  mysql:
+    image: mysql:5.7.14
+    restart: always
+    volumes:
+     - ./data/mysql:/var/lib/mysql
+    environment:
+     - MYSQL_ROOT_PASSWORD=phabricator
+    networks:
+      phabricator:
+        aliases:
+          - mysql
+
+networks:
+  phabricator:
+    driver: bridge
